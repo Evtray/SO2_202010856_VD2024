@@ -1,0 +1,1 @@
+savedcmd_/home/evtray/Escritorio/project/modules/capture_memory_snapshot/capture_mem_mod.mod := printf '%s\n'   capture_mem_mod.o | awk '!x[$$0]++ { print("/home/evtray/Escritorio/project/modules/capture_memory_snapshot/"$$0) }' > /home/evtray/Escritorio/project/modules/capture_memory_snapshot/capture_mem_mod.mod

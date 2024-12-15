@@ -1,0 +1,1 @@
+savedcmd_/home/evtray/Escritorio/project/modules/sistem_stats/Module.symvers :=  scripts/mod/modpost -M -m -a      -o /home/evtray/Escritorio/project/modules/sistem_stats/Module.symvers -T /home/evtray/Escritorio/project/modules/sistem_stats/modules.order -i Module.symvers -e 

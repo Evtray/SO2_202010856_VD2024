@@ -1,0 +1,1 @@
+savedcmd_/home/evtray/Escritorio/project/modules/get_io_throttle/Module.symvers :=  scripts/mod/modpost -M -m -a      -o /home/evtray/Escritorio/project/modules/get_io_throttle/Module.symvers -T /home/evtray/Escritorio/project/modules/get_io_throttle/modules.order -i Module.symvers -e 

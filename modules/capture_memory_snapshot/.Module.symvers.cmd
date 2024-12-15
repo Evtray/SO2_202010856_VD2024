@@ -1,0 +1,1 @@
+savedcmd_/home/evtray/Escritorio/project/modules/capture_memory_snapshot/Module.symvers :=  scripts/mod/modpost -M -m -a      -o /home/evtray/Escritorio/project/modules/capture_memory_snapshot/Module.symvers -T /home/evtray/Escritorio/project/modules/capture_memory_snapshot/modules.order -i Module.symvers -e 

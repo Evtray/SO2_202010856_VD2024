@@ -1,0 +1,1 @@
+savedcmd_/home/evtray/Escritorio/project/modules/sistem_stats/system_stats.mod := printf '%s\n'   system_stats.o | awk '!x[$$0]++ { print("/home/evtray/Escritorio/project/modules/sistem_stats/"$$0) }' > /home/evtray/Escritorio/project/modules/sistem_stats/system_stats.mod
