@@ -173,7 +173,23 @@
 162	common	sync			sys_sync
 163	common	acct			sys_acct
 164	common	settimeofday		sys_settimeofday
-165	common	mount			sys_mount
+165	common	mount			sys_mount// variables en  __NR_*
+#ifndef __NR_read
+#define __NR_read   0
+#endif
+
+#ifndef __NR_write
+#define __NR_write  1
+#endif
+
+#ifndef __NR_open
+#define __NR_open   2
+#endif
+
+#ifndef __NR_fork
+#define __NR_fork   57
+#endif
+
 166	common	umount2			sys_umount
 167	common	swapon			sys_swapon
 168	common	swapoff			sys_swapoff

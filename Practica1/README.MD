@@ -5,8 +5,6 @@
 ### **Nombre:** Edwin Sandoval Lopez
 ### **Carne:** 202010856  
 
-**Implementación del Syscall `capture_memory_snapshot`:**
-
 
 **Introducción y Objetivos del Proyecto:**  
    - **Objetivos generales:** Este proyecto desafía a los estudiantes a personalizar y expandir el kernel de Linux, permitiéndoles
@@ -20,56 +18,105 @@
           - Implementar tres nuevas syscalls personalizadas (`capture_memory_snapshot`, `track_syscall_usage`, `get_io_throttle`).  
      - Desarrollar módulos para obtener estadísticas del sistema (CPU, memoria, almacenamiento).
 
-**Configuración del Entorno:**  
-    1) Descargar el kernel de kernel.org (linux-6.8.tar.xz)
-    2)Descomprimirlo
-    3) Instalar las dependencias
-    sudo apt-get install build-essential libncurses5-dev fakeroot wget bzip2 openssl
-    sudo apt-get install build-essential libncurses-dev bison flex libssl-dev libelf-dev
+Aquí tienes una versión mejorada del fragmento en formato **Markdown**, con mejor formato, claridad y orden:
 
-    A partir de aca, en el directorio del codigo fuente. Estando como usuario root con "sudo -s"
+```markdown
+# Configuración del Entorno
 
-    4) Copiar el archivo de config por primera vez
-    cp -v /boot/config-$(uname -r) .config
+## 1. Descargar y preparar el kernel
+1. **Descargar el kernel** desde [kernel.org](https://kernel.org):  
+   Archivo recomendado: `linux-6.8.tar.xz`.
 
-    5) Limpiar el ambiente de compilacion
-    make clean
+2. **Descomprimir el archivo descargado**:
+   ```bash
+   tar -xvf linux-6.8.tar.xz
+   ```
 
-    5.5) Modificar la version del kernel en el archivo Makefile que esta en la raiz
+## 2. Instalar las dependencias necesarias
+Ejecutar los siguientes comandos para instalar las dependencias del sistema:  
+```bash
+sudo apt-get install build-essential libncurses5-dev fakeroot wget bzip2 openssl
+sudo apt-get install build-essential libncurses-dev bison flex libssl-dev libelf-dev
+```
 
-    Hasta arriba, estara asi:
+> **Nota:** Asegúrate de estar en el directorio del código fuente del kernel antes de continuar con los siguientes pasos.
 
-    EXTRAVERSION = 
-    EXTRAVERSION = -49-usac1
+---
 
+## 3. Configuración inicial del kernel
+1. Cambiar a usuario root:
+   ```bash
+   sudo -s
+   ```
 
-    6) Ejecutar los config iniciales:
-    make oldconfig
+2. **Copiar la configuración inicial del kernel**:
+   ```bash
+   cp -v /boot/config-$(uname -r) .config
+   ```
 
-    Darle enter a todo
-    7) make localmodconfig
+3. **Limpiar el ambiente de compilación**:
+   ```bash
+   make clean
+   ```
 
-    8)Deshabilitar los certificados de firma oficiales de Cannonical:
+4. **Modificar la versión del kernel** (opcional):  
+   Edita el archivo `Makefile` en la raíz del proyecto. Busca la línea que contiene `EXTRAVERSION` y modifícala, por ejemplo:
+   ```plaintext
+   EXTRAVERSION =
+   EXTRAVERSION = -49-usac1
+   ```
 
-    scripts/config --disable SYSTEM_TRUSTED_KEYS
-    scripts/config --disable SYSTEM_REVOCATION_KEYS
+---
 
+## 4. Configuración del kernel
+1. **Actualizar la configuración del kernel**:
+   ```bash
+   make oldconfig
+   ```
+   > Presiona **Enter** para aceptar las configuraciones por defecto.
 
-    9)Ahora te podes guiar del script "compile_and_install.sh" para compilar e instalar
-    Lo copias con nana, bloc de notas o como prefiras
-    Lo marcas con "chmod +x compile_and_install.sh" para permitir que se ejecute
-    ./compile_and_install.sh
+2. **Configurar módulos locales**:
+   ```bash
+   make localmodconfig
+   ```
 
-    Le das que no a todo lo de config (le podes dar enter por defecto)
+3. **Deshabilitar los certificados de firma oficiales de Canonical**:
+   ```bash
+   scripts/config --disable SYSTEM_TRUSTED_KEYS
+   scripts/config --disable SYSTEM_REVOCATION_KEYS
+   ```
 
-    10)vas por un cafe en lo que se compila
+---
 
+## 5. Compilación e instalación del kernel
+1. Usa el script `compile_and_install.sh` para compilar e instalar el kernel:
+   1. Crea el script con tu editor favorito (Nano, Bloc de Notas, etc.).
+   2. Asigna permisos de ejecución:
+      ```bash
+      chmod +x compile_and_install.sh
+      ```
+   3. Ejecútalo:
+      ```bash
+      ./compile_and_install.sh
+      ```
+   > **Nota:** Durante la ejecución, puedes presionar **Enter** para aceptar las configuraciones predeterminadas.
 
-    11) Le das que si a todos los comandos que te pregunte de install
-    Los hace automatico, pero si lo queres hacer manualmente:
-    make modules_install
-    make install
-    make headers_install
+2. Mientras el kernel se compila, puedes **tomarte un café**. ☕
+
+3. **Instalar manualmente** (opcional):  
+   Si prefieres hacer la instalación sin el script, ejecuta los siguientes comandos:
+   ```bash
+   make modules_install
+   make install
+   make headers_install
+   ```
+
+4. **Acepta las confirmaciones** durante el proceso de instalación.
+
+---
+
+¡Listo! Ahora tu kernel debería estar compilado e instalado correctamente. 🎉
+```
 
 **Descripción de Modificaciones en el Kernel:**  
    - **Personalización del nombre:** 
@@ -141,7 +188,7 @@ Para instalar la nueva syscall en el kernel:
    Retorna 0 en caso de éxito, o un valor negativo si hay error (por ejemplo, si user_snap apunta a memoria no válida).
 
 3. **Compilación e Integración con el Kernel:**  
-   El archivo `capture_snapshot.c` se incluyó en el `Makefile` del kernel (ej. `obj-y += capture_snapshot.o`) y se recompiló el kernel. Tras reiniciar con el nuevo kernel, la syscall quedó disponible para su uso en espacio de usuario.
+   El archivo `capture_snapshot.c` se incluyó en el `kernel/Makefile` del kernel (ej. `obj-y += capture_snapshot.o`) y se recompiló el kernel. Tras reiniciar con el nuevo kernel, la syscall quedó disponible para su uso en espacio de usuario.
 
 
 **Implementación del Syscall `track_syscall_usage`:**
@@ -164,7 +211,7 @@ Para instalar la nueva syscall en el kernel:
    Esta función se encarga de devolver un arreglo de estructuras con información sobre las syscalls monitoreadas (por ejemplo, `open`, `read`, `write`, `fork`): contador de invocaciones y último timestamp.
 
 3. **Compilación e Integración con el Kernel:**  
-   El archivo `track_usage.c` se incluyó en el `Makefile` del kernel (ej. `obj-y += track_usage.o`) y se recompiló el kernel. Tras reiniciar con el nuevo kernel, la syscall quedó disponible para su uso en espacio de usuario.
+   El archivo `track_usage.c` se incluyó en el `kernel/Makefile` del kernel (ej. `obj-y += track_usage.o`) y se recompiló el kernel. Tras reiniciar con el nuevo kernel, la syscall quedó disponible para su uso en espacio de usuario.
 
 Una vez instalada la syscall, un programa en espacio de usuario puede invocarla mediante `syscall(464, info, size)`, obteniendo así los datos recolectados. Este proceso de agregar la syscall se empleará igualmente para los otros dos syscalls personalizados del proyecto, siguiendo el mismo procedimiento: elegir un número libre, actualizar `syscall_64.tbl`, implementar la función `SYSCALL_DEFINE` con su lógica específica, recompilar el kernel e iniciar con él.
 
@@ -318,7 +365,7 @@ Para instalar la nueva syscall en el kernel:
    Retorna 0 en caso de éxito, o un valor negativo si hay error (por ejemplo, si user_snap apunta a memoria no válida).
 
 3. **Compilación e Integración con el Kernel:**  
-   El archivo `get_io_throttle.c` se incluyó en el `Makefile` del kernel (ej. `obj-y += get_io_throttle.o`) y se recompiló el kernel. Tras reiniciar con el nuevo kernel, la syscall quedó disponible para su uso en espacio de usuario.
+   El archivo `get_io_throttle.c` se incluyó en el `kernel/Makefile` del kernel (ej. `obj-y += get_io_throttle.o`) y se recompiló el kernel. Tras reiniciar con el nuevo kernel, la syscall quedó disponible para su uso en espacio de usuario.
 
 ```c
 #include <linux/kernel.h>

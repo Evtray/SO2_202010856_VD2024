@@ -1,21 +1,23 @@
-// SPDX-License-Identifier: GPL
 #include <linux/module.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>
 
-// Declarar extern las estructuras globales (ajusta según tu código real)
-extern struct my_tracked_syscall_info {
+
+struct my_tracked_syscall_info {
     const char *name;
     unsigned long count;
     u64 last_timestamp_ns;
-} monitored_syscalls[];
+};
 
-extern int monitored_count;
-extern struct my_tracked_syscall_info monitored_syscalls[];
+int monitored_count = 4;
+struct my_tracked_syscall_info monitored_syscalls[] = {
+    { .name = "read",  .count = 10, .last_timestamp_ns = 1234567890ULL },
+    { .name = "write", .count = 5,  .last_timestamp_ns = 9876543210ULL },
+    { .name = "open",  .count = 0,  .last_timestamp_ns = 0ULL },
+    { .name = "fork",  .count = 0,  .last_timestamp_ns = 0ULL },
+};
 
-
-// Función show
 static int track_syscalls_show(struct seq_file *m, void *v) {
     int i;
     seq_puts(m, "--- Syscalls Usage ---\n");

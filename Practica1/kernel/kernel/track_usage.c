@@ -135,7 +135,7 @@ SYSCALL_DEFINE2(track_syscall_usage, struct syscall_usage_user __user *, buf, in
     for (i = 0; i < monitored_count; i++) {
         struct syscall_usage_user temp;
         strncpy(temp.name, monitored_syscalls[i].name, sizeof(temp.name));
-        temp.name[sizeof(temp.name)-1] = '\0'; // Asegurar terminación
+        temp.name[sizeof(temp.name)-1] = '\0';
         temp.count = monitored_syscalls[i].count;
         temp.last_timestamp_ns = monitored_syscalls[i].last_timestamp_ns;
 

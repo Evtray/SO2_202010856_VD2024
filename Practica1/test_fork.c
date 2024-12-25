@@ -5,7 +5,7 @@
 #include <sys/syscall.h> // Para syscall()
 
 int main() {
-    pid_t pid = syscall(SYS_fork); // Llamar directamente a la syscall fork
+    pid_t pid = syscall(SYS_fork);
     if (pid == 0) {
         // Proceso hijo
         _exit(0);

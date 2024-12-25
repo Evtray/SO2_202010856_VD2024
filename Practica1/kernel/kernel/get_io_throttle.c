@@ -27,8 +27,6 @@ SYSCALL_DEFINE2(get_io_throttle, int, pid, struct io_stats_user __user *, udata)
         return -ESRCH; 
     }
 
-    // Acceso a las estadísticas en task->ioac
-    // Estos campos se encuentran en task->ioac.rchar, etc.
     stats.rchar = task->ioac.rchar;
     stats.wchar = task->ioac.wchar;
     stats.syscr = task->ioac.syscr;
