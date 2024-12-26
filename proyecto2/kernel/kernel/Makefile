@@ -55,7 +55,7 @@ obj-y += track_usage.o
 obj-y += get_io_throttle.o
 obj-y += tamalloc_get_stats.o
 obj-y += tamalloc_get_indiviual_stats.o
-obj-y += tamallac_get_global_stats.o
+obj-y += tamalloc_get_global_stats.o
 obj-$(CONFIG_MODULES) += module/
 
 obj-$(CONFIG_KCMP) += kcmp.o
