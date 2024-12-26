@@ -5,7 +5,20 @@
 ### **Nombre:** Edwin Sandoval Lopez
 ### **Carne:** 202010856  
 
-Syscalls desarrolladas:
+**Introducción y Objetivos del Proyecto:**
+- Desarrollar un asignador de memoria que inicialice memoria en 0 u otro char predeterminado
+sin reservar páginas físicas inmediatamente.
+- Comprender los principios de asignación de memoria, páginas físicas, RSS, memoria reservada y
+memoria alojada.
+- Implementar técnicas de control de acceso a páginas que fueron reservadas con este nuevo
+asignador.
+- Entender el concepto de lazy-loading, lazy-init, lazy-zeroing.
+- Entender mapping de memoria virtual con masks como MAP_NORESERVE, MAP_PRIVATE y
+MAP_ANONYMOUS
+- Adquirir experiencia práctica en la manipulación y modificación del kernel de Linux para la
+gestión de memoria.
+
+## Implementación de nuevas llamadas al sistema:
 
 - **Syscall 551**: `tamalloc_get_stats` (asigna memoria con lazy-zeroing)  
 - **Syscall 552**: `tamalloc_get_global_stats` (recolecta estadísticas de memoria globales)  
