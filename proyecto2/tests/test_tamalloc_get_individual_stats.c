@@ -1,3 +1,20 @@
+/******************************************************************************
+ * manager_process_horizontal.c
+ *
+ * Compilación:
+ *   gcc -o manager_process_horizontal manager_process_horizontal.c
+ *
+ * Uso:
+ *   ./manager_process_horizontal [PID]
+ *   - Si no se pasa un PID, se asume PID=0 (todos los procesos).
+ *   - Si <PID> != 0 => se muestra la info de UN SOLO proceso.
+ *
+ * Descripción:
+ *   Invoca la syscall 553 (tamalloc_get_indiviual_stats) y muestra la
+ *   información (PID, Virtual, Resident, %Uso y OOM Score)
+ *   de forma horizontal (una sola línea por proceso).
+ ******************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
@@ -6,10 +23,6 @@
 #include <dirent.h>
 #include <ctype.h>
 
-/*
- * Estructura usada en el User Space. Debe coincidir con lo definido
- * en el kernel (e.g., include/linux/tamalloc_syscalls.h).
- */
 struct tamalloc_proc_info {
     unsigned long vm_kb;             // Memoria virtual (VmSize) en KB
     unsigned long rss_kb;            // Memoria residente (VmRSS) en KB
@@ -21,45 +34,42 @@ struct tamalloc_proc_info {
 #define __NR_tamalloc_get_indiviual_stats 553
 #endif
 
-/**
- * Invoca la syscall (553) para consultar estadísticas de un PID.
- */
-static inline long tamalloc_get_indiviual_stats(pid_t pid,
-                                               struct tamalloc_proc_info *info)
+static inline long tamalloc_get_indiviual_stats(pid_t pid, struct tamalloc_proc_info *info)
 {
     return syscall(__NR_tamalloc_get_indiviual_stats, pid, info);
 }
 
-/**
- * Imprime la información del proceso en una tabla alineada.
- */
-static void print_proc_info(pid_t pid, const struct tamalloc_proc_info *pinfo)
+static void print_row_horizontal(pid_t pid, const struct tamalloc_proc_info *pinfo)
 {
-    /* Ajustamos anchos para que la tabla sea consistente. */
-    printf("+------------------------------------------------------------------+\n");
-    printf("| tamalloc_get_indiviual_stats (PID=%-6d)                         |\n", pid);
-    printf("+--------------------------------+----------------------------------+\n");
-    printf("| %-30s | %32lu |\n", "Memoria Virtual (KB)", pinfo->vm_kb);
-    printf("| %-30s | %32lu |\n", "Memoria Residente (KB)", pinfo->rss_kb);
-    printf("| %-30s | %31u%% |\n", "Porcentaje de Uso", pinfo->rss_percent_of_vm);
-    printf("| %-30s | %32d |\n", "OOM Score (ajuste)", pinfo->oom_adjustment);
-    printf("+--------------------------------+----------------------------------+\n\n");
+    printf("| %6d | %13lu | %13lu | %5u%% | %9d |\n",
+           pid,
+           pinfo->vm_kb,
+           pinfo->rss_kb,
+           pinfo->rss_percent_of_vm,
+           pinfo->oom_adjustment);
+}
+
+static void print_header_horizontal(void)
+{
+    printf("+--------+---------------+---------------+-------+------------+\n");
+    printf("|  PID   |  Virtual(KB)  | Resident(KB)  | %%Uso   | OOM Score |\n");
+    printf("+--------+---------------+---------------+-------+------------+\n");
+}
+
+static void print_footer_horizontal(void)
+{
+    printf("+--------+---------------+---------------+-------+------------+\n\n");
 }
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2) {
-        fprintf(stderr, "Uso: %s <PID>\n", argv[0]);
-        fprintf(stderr, "     PID = 0 => consultar TODOS los procesos.\n");
-        return 1;
+    pid_t pid = 0;  // Valor por defecto: 0 => consultar TODOS los procesos
+
+    // Si se pasó al menos un argumento, tomamos ese PID
+    if (argc >= 2) {
+        pid = (pid_t)atoi(argv[1]);
     }
 
-    pid_t pid = (pid_t)atoi(argv[1]);
-
-    /*
-     * Caso 1: PID != 0
-     *         => Consultamos información de un solo proceso.
-     */
     if (pid != 0) {
         struct tamalloc_proc_info pinfo;
         long ret = tamalloc_get_indiviual_stats(pid, &pinfo);
@@ -67,13 +77,12 @@ int main(int argc, char *argv[])
             perror("tamalloc_get_indiviual_stats syscall");
             return 1;
         }
-        print_proc_info(pid, &pinfo);
+
+        // Imprimir la tabla (cabecera + row + footer)
+        print_header_horizontal();
+        print_row_horizontal(pid, &pinfo);
+        print_footer_horizontal();
     }
-    /*
-     * Caso 2: PID = 0
-     *         => Recorremos /proc para obtener TODOS los procesos
-     *            y llamamos a la syscall individual por cada PID.
-     */
     else {
         DIR *dp;
         struct dirent *entry;
@@ -84,8 +93,11 @@ int main(int argc, char *argv[])
             return 1;
         }
 
+        // Imprimimos la CABECERA antes de iterar
+        print_header_horizontal();
+
         while ((entry = readdir(dp)) != NULL) {
-            /* Filtrar sólo directorios cuyo nombre sea numérico (PID) */
+            // Filtrar solo directorios numéricos (PID)
             if (entry->d_type == DT_DIR) {
                 const char *dname = entry->d_name;
                 int is_numeric = 1;
@@ -101,16 +113,16 @@ int main(int argc, char *argv[])
                         struct tamalloc_proc_info pinfo;
                         long ret = tamalloc_get_indiviual_stats(current_pid, &pinfo);
                         if (ret == 0) {
-                            /* Si la syscall tuvo éxito, imprimimos la tabla */
-                            print_proc_info(current_pid, &pinfo);
+                            print_row_horizontal(current_pid, &pinfo);
                         }
-                        /* Si ret < 0, seguramente es un hilo kernel o proceso
-                           que terminó. Lo ignoramos en silencio. */
+                        // Si ret < 0 => kernel thread o proceso terminado => ignorar.
                     }
                 }
             }
         }
         closedir(dp);
+
+        print_footer_horizontal();
     }
 
     return 0;

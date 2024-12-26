@@ -118,63 +118,49 @@ SYSCALL_DEFINE1(tamalloc_get_stats, size_t, size)
 Se define una estructura `global_memory_stats` que se envía desde el usuario y se rellena en el kernel.
 
 ```c
-#include <linux/kernel.h>
-#include <linux/syscalls.h>
-#include <linux/mm.h>
-#include <linux/sched.h>
-#include <linux/uaccess.h>
-#include <linux/rcupdate.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#include <errno.h>
 
-/* Estructura para las estadísticas globales (en MB) */
-struct global_memory_stats {
-    size_t total_reserved_memory_mb; // Suma de VmSize (en MB)
-    size_t total_used_memory_mb;     // Suma de VmRSS (en MB)
+struct tamalloc_global_info {
+    unsigned long aggregate_vm_mb;   // Suma de memoria virtual en MB
+    unsigned long aggregate_rss_mb;  // Suma de memoria residente en MB
 };
 
-/*
- * Syscall 552:
- * long tamalloc_get_global_stats(struct global_memory_stats __user *stats);
- *
- * Recorre todos los procesos del sistema y acumula:
- *   - Memoria reservada total (VmSize) => total_vm * PAGE_SIZE
- *   - Memoria utilizada total (VmRSS)  => get_mm_rss(mm) * PAGE_SIZE
- * Convierte a MB y retorna en 'stats'.
- */
-SYSCALL_DEFINE1(tamalloc_get_global_stats,
-                struct global_memory_stats __user *, stats)
+#ifndef __NR_tamalloc_get_global_stats
+#define __NR_tamalloc_get_global_stats 552
+#endif
+
+
+static inline long tamalloc_get_global_stats(struct tamalloc_global_info *info)
 {
-    struct task_struct *task;
-    struct global_memory_stats kstats = {0};
-    struct mm_struct *mm;
+    return syscall(__NR_tamalloc_get_global_stats, info);
+}
 
-    // 1. Proteger la iteración con RCU
-    rcu_read_lock();
+static void print_global_info(const struct tamalloc_global_info *info)
+{
+    printf("+---------------------------------------------------------------+\n");
+    printf("| tamalloc_get_global_stats (Estadísticas Globales)             |\n");
+    printf("+--------------------------------+------------------------------+\n");
+    printf("| %-30s | %24lu MB |\n", "Memoria Virtual Agregada", info->aggregate_vm_mb);
+    printf("| %-30s | %24lu MB |\n", "Memoria Residente Agregada", info->aggregate_rss_mb);
+    printf("+--------------------------------+----------------------------+\n\n");
+}
 
-    for_each_process(task) {
-        // Evitar procesos sin mm (kernel threads) o zombies
-        if (task->exit_state == EXIT_ZOMBIE)
-            continue;
+int main(void)
+{
+    struct tamalloc_global_info info;
 
-        mm = get_task_mm(task);
-        if (!mm)
-            continue;
-
-        // Acumular total_vm (VmSize)
-        kstats.total_reserved_memory_mb +=
-            (mm->total_vm * PAGE_SIZE) >> 20; // / (1024 * 1024)
-
-        // Acumular RSS
-        kstats.total_used_memory_mb +=
-            (get_mm_rss(mm) * PAGE_SIZE) >> 20;
-
-        mmput(mm);
+    long ret = tamalloc_get_global_stats(&info);
+    if (ret < 0) {
+        perror("tamalloc_get_global_stats syscall");
+        return 1;
     }
 
-    rcu_read_unlock();
-
-    // 2. Copiar resultados al espacio de usuario
-    if (copy_to_user(stats, &kstats, sizeof(kstats)))
-        return -EFAULT;
+    /* Imprimir en formato de tabla */
+    print_global_info(&info);
 
     return 0;
 }
@@ -377,50 +363,132 @@ sudo ./test_tamalloc_get_global_stats
 ## 4.3. Test para `tamalloc_get_indiviual_stats` (syscall 553)
 
 ```c
+/******************************************************************************
+ * manager_process_horizontal.c
+ *
+ * Compilación:
+ *   gcc -o manager_process_horizontal manager_process_horizontal.c
+ *
+ * Uso:
+ *   ./manager_process_horizontal [PID]
+ *   - Si no se pasa un PID, se asume PID=0 (todos los procesos).
+ *   - Si <PID> != 0 => se muestra la info de UN SOLO proceso.
+ *
+ * Descripción:
+ *   Invoca la syscall 553 (tamalloc_get_indiviual_stats) y muestra la
+ *   información (PID, Virtual, Resident, %Uso y OOM Score)
+ *   de forma horizontal (una sola línea por proceso).
+ ******************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 #include <errno.h>
+#include <dirent.h>
+#include <ctype.h>
+
+struct tamalloc_proc_info {
+    unsigned long vm_kb;             // Memoria virtual (VmSize) en KB
+    unsigned long rss_kb;            // Memoria residente (VmRSS) en KB
+    unsigned int  rss_percent_of_vm; // (rss_kb / vm_kb) * 100
+    int           oom_adjustment;    // Ajuste OOM (oom_score_adj)
+};
 
 #ifndef __NR_tamalloc_get_indiviual_stats
 #define __NR_tamalloc_get_indiviual_stats 553
 #endif
 
-struct process_memory_stats {
-    size_t reserved_memory_kb;
-    size_t used_memory_kb;
-    unsigned int used_memory_percentage;
-    int oom_score;
-};
-
-static inline long tamalloc_get_indiviual_stats(pid_t pid,
-                                               struct process_memory_stats *stats)
+static inline long tamalloc_get_indiviual_stats(pid_t pid, struct tamalloc_proc_info *info)
 {
-    return syscall(__NR_tamalloc_get_indiviual_stats, pid, stats);
+    return syscall(__NR_tamalloc_get_indiviual_stats, pid, info);
+}
+
+static void print_row_horizontal(pid_t pid, const struct tamalloc_proc_info *pinfo)
+{
+    printf("| %6d | %13lu | %13lu | %5u%% | %9d |\n",
+           pid,
+           pinfo->vm_kb,
+           pinfo->rss_kb,
+           pinfo->rss_percent_of_vm,
+           pinfo->oom_adjustment);
+}
+
+static void print_header_horizontal(void)
+{
+    printf("+--------+---------------+---------------+-------+------------+\n");
+    printf("|  PID   |  Virtual(KB)  | Resident(KB)  | %%Uso   | OOM Score |\n");
+    printf("+--------+---------------+---------------+-------+------------+\n");
+}
+
+static void print_footer_horizontal(void)
+{
+    printf("+--------+---------------+---------------+-------+------------+\n\n");
 }
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2) {
-        fprintf(stderr, "Uso: %s <PID>\n", argv[0]);
-        return 1;
+    pid_t pid = 0;  // Valor por defecto: 0 => consultar TODOS los procesos
+
+    // Si se pasó al menos un argumento, tomamos ese PID
+    if (argc >= 2) {
+        pid = (pid_t)atoi(argv[1]);
     }
 
-    pid_t pid = (pid_t)atoi(argv[1]);
-    struct process_memory_stats pm_stats;
-    long ret = tamalloc_get_indiviual_stats(pid, &pm_stats);
+    if (pid != 0) {
+        struct tamalloc_proc_info pinfo;
+        long ret = tamalloc_get_indiviual_stats(pid, &pinfo);
+        if (ret < 0) {
+            perror("tamalloc_get_indiviual_stats syscall");
+            return 1;
+        }
 
-    if (ret < 0) {
-        perror("tamalloc_get_indiviual_stats syscall");
-        return 1;
+        // Imprimir la tabla (cabecera + row + footer)
+        print_header_horizontal();
+        print_row_horizontal(pid, &pinfo);
+        print_footer_horizontal();
     }
+    else {
+        DIR *dp;
+        struct dirent *entry;
 
-    printf("=== Estadísticas de Proceso (PID: %d) ===\n", pid);
-    printf("Memoria reservada (KB):  %zu\n", pm_stats.reserved_memory_kb);
-    printf("Memoria en uso (KB):     %zu\n", pm_stats.used_memory_kb);
-    printf("Porcentaje de uso:       %u%%\n", pm_stats.used_memory_percentage);
-    printf("OOM Score (ajuste):      %d\n", pm_stats.oom_score);
+        dp = opendir("/proc");
+        if (!dp) {
+            perror("No se pudo abrir /proc");
+            return 1;
+        }
+
+        // Imprimimos la CABECERA antes de iterar
+        print_header_horizontal();
+
+        while ((entry = readdir(dp)) != NULL) {
+            // Filtrar solo directorios numéricos (PID)
+            if (entry->d_type == DT_DIR) {
+                const char *dname = entry->d_name;
+                int is_numeric = 1;
+                for (int i = 0; dname[i] != '\0'; i++) {
+                    if (!isdigit((unsigned char)dname[i])) {
+                        is_numeric = 0;
+                        break;
+                    }
+                }
+                if (is_numeric) {
+                    pid_t current_pid = (pid_t)atoi(dname);
+                    if (current_pid > 0) {
+                        struct tamalloc_proc_info pinfo;
+                        long ret = tamalloc_get_indiviual_stats(current_pid, &pinfo);
+                        if (ret == 0) {
+                            print_row_horizontal(current_pid, &pinfo);
+                        }
+                        // Si ret < 0 => kernel thread o proceso terminado => ignorar.
+                    }
+                }
+            }
+        }
+        closedir(dp);
+
+        print_footer_horizontal();
+    }
 
     return 0;
 }
