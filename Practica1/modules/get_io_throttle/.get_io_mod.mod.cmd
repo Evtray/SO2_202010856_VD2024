@@ -1,1 +1,0 @@
-savedcmd_/home/evtray/Escritorio/project/modules/get_io_throttle/get_io_mod.mod := printf '%s\n'   get_io_mod.o | awk '!x[$$0]++ { print("/home/evtray/Escritorio/project/modules/get_io_throttle/"$$0) }' > /home/evtray/Escritorio/project/modules/get_io_throttle/get_io_mod.mod

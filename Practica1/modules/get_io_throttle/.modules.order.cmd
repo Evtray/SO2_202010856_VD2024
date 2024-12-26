@@ -1,1 +1,0 @@
-savedcmd_/home/evtray/Escritorio/project/modules/get_io_throttle/modules.order := {   echo /home/evtray/Escritorio/project/modules/get_io_throttle/get_io_mod.o; :; } > /home/evtray/Escritorio/project/modules/get_io_throttle/modules.order

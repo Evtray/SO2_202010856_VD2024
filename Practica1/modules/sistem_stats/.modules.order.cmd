@@ -1,1 +1,0 @@
-savedcmd_/home/evtray/Escritorio/project/modules/sistem_stats/modules.order := {   echo /home/evtray/Escritorio/project/modules/sistem_stats/system_stats.o; :; } > /home/evtray/Escritorio/project/modules/sistem_stats/modules.order
