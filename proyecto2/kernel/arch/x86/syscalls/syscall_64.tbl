@@ -448,6 +448,6 @@
 # This is the end of the legacy x32 range.  Numbers 548 and above are
 # not special and are not to be used for x32-specific syscalls.
 
-551    64   tamalloc_get_stats        sys_tamalloc_get_stats
-552    64   tamalloc_get_global_stats sys_tamalloc_get_global_stats
-553    64   tamalloc_get_individual_stats    sys_tamalloc_get_individual_stats
+551    64   tamalloc_get_stats     sys_tamalloc_get_stats
+552    64   tamalloc_get_global_stats    sys_tamalloc_get_global_stats
+553    64   tamalloc_get_individual_stats      sys_tamalloc_get_individual_stats

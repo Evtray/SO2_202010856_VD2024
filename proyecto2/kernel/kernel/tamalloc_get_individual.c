@@ -11,12 +11,12 @@
 
 /*
  * Syscall número 553:
- * long tamalloc_get_indiviual_stats(pid_t pid, struct tamalloc_proc_info __user *info);
+ * long tamalloc_get_individual_stats(pid_t pid, struct tamalloc_proc_info __user *info);
  *
  * Obtiene la memoria virtual reservada y la residente para el PID indicado,
  * calculando además el porcentaje de uso y capturando oom_score_adj.
  */
-SYSCALL_DEFINE2(tamalloc_get_indiviual_stats,
+SYSCALL_DEFINE2(tamalloc_get_individual_stats,
 		pid_t, pid,
 		struct tamalloc_proc_info __user *, info)
 {
