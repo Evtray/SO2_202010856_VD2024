@@ -33,9 +33,9 @@ static void print_global_info(const struct tamalloc_global_info *info)
     printf("+---------------------------------------------------------------+\n");
     printf("| tamalloc_get_global_stats (Estadísticas Globales)             |\n");
     printf("+--------------------------------+------------------------------+\n");
-    printf("| %-30s | %24lu MB |\n", "Memoria Virtual Agregada", info->aggregate_vm_mb);
-    printf("| %-30s | %24lu MB |\n", "Memoria Residente Agregada", info->aggregate_rss_mb);
-    printf("+--------------------------------+----------------------------+\n\n");
+    printf("| %-30s | %24lu MB  |\n", "Memoria Virtual Agregada", info->aggregate_vm_mb);
+    printf("| %-30s | %24lu MB  |\n", "Memoria Residente Agregada", info->aggregate_rss_mb);
+    printf("+--------------------------------+------------------------------+\n\n");
 }
 
 int main(void)
