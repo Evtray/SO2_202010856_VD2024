@@ -450,4 +450,4 @@
 
 551    64   tamalloc_get_stats        sys_tamalloc_get_stats
 552    64   tamalloc_get_global_stats sys_tamalloc_get_global_stats
-553    64   tamalloc_get_indiviual    sys_tamalloc_get_indiviual_stats
+553    64   tamalloc_get_individual_stats    sys_tamalloc_get_individual_stats

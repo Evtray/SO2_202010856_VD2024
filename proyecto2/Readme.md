@@ -425,7 +425,7 @@ sudo ./test_tamalloc_get_indiviual_stats 1234
 # 5. Compilación e Instalación del Kernel
 
 1. **Agregar el código** al árbol del kernel:  
-   - Por ejemplo, crea el archivo `kernel/sys_tamalloc.c` con las 3 syscalls.  
+   - Por ejemplo, crea los archivos en `kernel/` de cada syscalls.  
    - Asegúrate de incluirlo en el `Makefile` o `Kconfig` para que se compile.
 
 2. **Editar la tabla de syscalls**:  
@@ -455,6 +455,152 @@ sudo ./test_tamalloc_get_indiviual_stats 1234
 
 - **`tamalloc_get_indiviual_stats (553)`**:  
   - Recolecta estadísticas de un **proceso en particular** (PID dado): memoria reservada, usada, porcentaje y OOM Score.
-
-Esta implementación cumple con el requisito de crear **tres syscalls** diferentes a partir de los números especificados (551, 552 y 553), integrarlas en el kernel y proporcionar ejemplos de prueba en C para verificar su correcto funcionamiento. ¡Éxito con tu proyecto!
 ---
+
+# 7 Pruebas realizadas
+## 4.3. Test para `test.c` (syscall 553)
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <errno.h>
+#include <time.h>
+
+#define SYS_TAMALLOC 551
+int main() {
+    printf("Program for tamalloc PID: %d\n", getpid());
+
+    printf("Program to Allocate Memory using tamalloc. Press ENTER to continue...\n");
+    getchar();
+
+    size_t total_size = 10 * 1024 * 1024;
+
+    // Use the tamalloc syscall
+    char *buffer = (char *)syscall(SYS_TAMALLOC, total_size);
+    if ((long)buffer < 0) {
+        perror("tamalloc failed");
+        return 1;
+    }
+    printf("Allocated 10MB of memory using tamalloc at address: %p\n", buffer);
+
+    printf("Press ENTER to start reading memory byte by byte...\n");
+    getchar();
+
+    srand(time(NULL));
+
+    // Read memory byte by byte and verify it is zero
+    for (size_t i = 0; i < total_size; i++) {
+        char t = buffer[i]; // triggers lazy allocation (with zeroing :D )
+        if (t != 0) {
+            printf("ERROR FATAL: Memory at byte %zu was not initialized to 0\n", i);
+            return 10;
+        }
+
+        //Write a random A-Z char to trigger CoW
+        char random_letter = 'A' + (rand() % 26);
+        buffer[i] = random_letter;
+
+        if (i % (1024 * 1024) == 0 && i > 0) { // Every 1 MB
+            printf("Checked %zu MB...\n", i / (1024 * 1024));
+            sleep(1);
+        }
+    }
+
+    printf("All memory verified to be zero-initialized. Press ENTER to exit.\n");
+    getchar();
+    return 0;
+}
+```
+#### Ejucución de test
+![alt text](image.png)
+
+Pruebas a realizar con el PID: 82488
+
+#### Ejucución de tamalloc_get_indiviual_stats
+![alt text](image-1.png)
+
+### Resultados
+
+1. **Asignación Inicial**
+   - PID: 82488
+   - Tamaño solicitado: 10MB
+   - Dirección asignada: 0x7677a5000000
+
+2. **Monitoreo de Memoria**
+   ```bash
+   # Monitor RSS y VmSize
+   watch -n 0.5 "cat /proc/82488/status | grep -E 'VmRSS|VmSize'"
+   
+   # Monitor OOM Score
+   watch -n 0.5 "cat /proc/82488/oom_score"
+   ```
+    ![alt text](image-2.png)
+    ![alt text](image-3.png)
+
+3. **Verificación de Lazy-Zeroing**
+   - Herramienta: PINCE
+   - Resultados: Memoria inicializada en 0
+   - Validación exitosa byte por byte
+    ![alt text](image-6.png)
+    ![alt text](image-8.png)
+
+4. **Estadísticas Globales**
+   - Monitoreo exitoso de asignación total
+   - Verificación de contadores de sistema
+    ![alt text](image-7.png)
+
+
+#### Ejucución de test_tamalloc_get_global_stats
+![alt text](image-5.png)
+
+# 8. Análisis: Memoria Solicitada vs. Utilizada
+
+Con tamalloc, la memoria solicitada supera significativamente la memoria utilizada (RSS) debido al lazy-zeroing:
+
+**Memoria Solicitada:**
+- Reserva espacio virtual grande
+- No asigna páginas físicas inmediatamente
+- La app "ve" que tiene memoria disponible
+
+**Memoria Utilizada (RSS):**
+- Asigna páginas físicas solo al accederlas
+- Crece gradualmente con el uso
+- Mantiene RSS bajo si no se usan todas las páginas
+
+A diferencia de `calloc` o `kzalloc`, tamalloc permite:
+- Alta reserva virtual
+- Bajo uso físico real
+- Optimización de memoria
+- Overcommit controlado
+
+Ejemplo: En pruebas, al solicitar 100 MB pero usar 10 MB, el RSS se mantuvo cerca de 10 MB.
+---
+
+# 9. Problemas encontrados (problema/causa/solución)
+
+1. **Error en compilación/enlace**
+   - **Problema**: Errores como "No hay regla para construir..." y "undefined reference"
+   - **Causa**: Nombres en archivos `.c` y funciones que no coincidían con `syscall_64.tbl`
+   - **Solución**: Verificar que los nombres coincidan exactamente en todos los archivos
+
+2. **Confusión con oom_score**
+   - **Problema**: El score real difería del valor de la syscall
+   - **Causa**: `oom_score_adj` es diferente de `oom_score` - el primero es solo un ajuste
+   - **Solución**: Documentar claramente que reportamos `oom_score_adj`, no el score final
+
+3. **Malentendido sobre memoria**  
+   - **Problema**: Usuarios confundían memoria reservada con memoria física usada
+   - **Causa**: Con lazy-zeroing, la memoria reservada no igual memoria en uso
+   - **Solución**: Documentar diferencia entre espacio virtual (Reserved) y físico (RSS)
+
+4. **Problemas de compilación**
+   - **Problema**: Errores al recompilar el kernel
+   - **Causa**: Sin limpieza previa o faltaban librerías (ncurses-dev, libssl-dev)
+   - **Solución**: Seguir proceso ordenado: limpiar, copiar config, instalar dependencias
+
+# 10. Mensaje personal de conclusión
+
+Este proyecto me ayudó a entender cómo funciona la memoria en Linux desde adentro. Aprendí sobre cómo el sistema maneja la memoria virtual y física. Lo más interesante fue crear mi propio asignador de memoria con características especiales, lo que me mostró la diferencia entre la memoria que reservamos y la que realmente usamos.
+Me enfrenté a varios retos como modificar el código del kernel y trabajar con el sistema que decide qué programas cerrar cuando falta memoria. Todo esto me ayudó a comprender un poco mas el funcionamiento de memoria.

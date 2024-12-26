@@ -1,0 +1,5 @@
+{
+    "files.associations": {
+        "tamalloc_syscalls.h": "c"
+    }
+}

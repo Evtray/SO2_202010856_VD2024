@@ -33,8 +33,5 @@ int main(int argc, char *argv[])
     ptr[0] = 'H';
     ptr[size - 1] = 'Z';
 
-    printf("Escritura inicial hecha. Verifica RSS con 'ps' o 'pmap'.\n");
-    // Ojo: si quieres liberar => munmap(ptr, size);
-
     return 0;
 }
